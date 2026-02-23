@@ -63,10 +63,12 @@ def _sandbox_dir(sandbox_id: str) -> Path:
     return (SANDBOX_ROOT / sandbox_id).resolve()
 
 
-def _safe_path(base_dir: Path, rel_path: str) -> Path:
+def _safe_path(base_dir: Path, rel_path: str, *, allow_base: bool = False) -> Path:
     rel = rel_path.lstrip("/\\")
     p = (base_dir / rel).resolve()
     if p == base_dir:
+        if allow_base:
+            return p
         raise HTTPException(status_code=400, detail="Invalid path")
     if base_dir in p.parents:
         return p
@@ -197,7 +199,7 @@ def list_files(sandbox_id: str, dir: str = Query(default="/", description="Direc
         _get_container(sandbox_id)
         raise HTTPException(status_code=404, detail="Sandbox directory missing")
 
-    list_dir = _safe_path(base, dir)
+    list_dir = _safe_path(base, dir, allow_base=True)
     if not list_dir.exists() or not list_dir.is_dir():
         raise HTTPException(status_code=404, detail="Directory not found")
 

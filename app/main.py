@@ -44,6 +44,16 @@ class UpsertFileRequest(BaseModel):
     content: str
 
 
+class InstallPackagesRequest(BaseModel):
+    packages: List[str]
+
+
+class InstallPackagesResponse(BaseModel):
+    exit_code: int
+    stdout: str
+    stderr: str
+
+
 def _container_name(sandbox_id: str) -> str:
     return f"{CONTAINER_PREFIX}-{sandbox_id}"
 
@@ -119,6 +129,17 @@ def doc() -> dict:
                 "response": {"exit_code": 0, "stdout": "...", "stderr": "..."},
                 "notes": ["Only .py files can be executed"],
             },
+            {
+                "method": "POST",
+                "path": "/api/sandboxes/{id}/packages",
+                "description": "Install Python packages into the sandbox (persisted in the workspace)",
+                "request": {"packages": ["requests==2.32.3"]},
+                "response": {"exit_code": 0, "stdout": "...", "stderr": "..."},
+                "notes": [
+                    "Packages are installed into /workspace/.python_packages using pip --target",
+                    "Execution includes that directory via PYTHONPATH",
+                ],
+            },
         ],
     }
 
@@ -145,6 +166,7 @@ def create_sandbox() -> CreateSandboxResponse:
             security_opt=["no-new-privileges"],
             user="1000:1000",
             working_dir=WORKDIR_IN_CONTAINER,
+            tmpfs={"/tmp": "rw,noexec,nosuid,size=256m"},
             volumes={
                 str(host_dir): {"bind": WORKDIR_IN_CONTAINER, "mode": "rw"}
             },
@@ -226,7 +248,14 @@ def execute_code(sandbox_id: str, req: ExecuteRequest) -> ExecuteResponse:
 
     cmd = ["python", str(Path(WORKDIR_IN_CONTAINER) / req.path).replace("\\", "/")] + req.args
 
-    exec_result = container.exec_run(cmd, stdout=True, stderr=True, demux=True)
+    pkg_dir = str(Path(WORKDIR_IN_CONTAINER) / ".python_packages").replace("\\", "/")
+    exec_result = container.exec_run(
+        cmd,
+        stdout=True,
+        stderr=True,
+        demux=True,
+        environment={"PYTHONPATH": pkg_dir},
+    )
 
     exit_code = int(getattr(exec_result, "exit_code", 1))
     stdout_b, stderr_b = getattr(exec_result, "output", (b"", b"")) or (b"", b"")
@@ -235,3 +264,39 @@ def execute_code(sandbox_id: str, req: ExecuteRequest) -> ExecuteResponse:
     stderr = (stderr_b or b"").decode("utf-8", errors="replace")
 
     return ExecuteResponse(exit_code=exit_code, stdout=stdout, stderr=stderr)
+
+
+@app.post("/api/sandboxes/{sandbox_id}/packages", response_model=InstallPackagesResponse)
+def install_packages(sandbox_id: str, req: InstallPackagesRequest) -> InstallPackagesResponse:
+    if not req.packages:
+        raise HTTPException(status_code=400, detail="No packages provided")
+
+    base = _sandbox_dir(sandbox_id)
+    if not base.exists():
+        _get_container(sandbox_id)
+        raise HTTPException(status_code=404, detail="Sandbox directory missing")
+
+    container = _get_container(sandbox_id)
+
+    target_dir = str(Path(WORKDIR_IN_CONTAINER) / ".python_packages").replace("\\", "/")
+    cmd = [
+        "python",
+        "-m",
+        "pip",
+        "install",
+        "--no-cache-dir",
+        "--disable-pip-version-check",
+        "--target",
+        target_dir,
+        *req.packages,
+    ]
+
+    exec_result = container.exec_run(cmd, stdout=True, stderr=True, demux=True)
+
+    exit_code = int(getattr(exec_result, "exit_code", 1))
+    stdout_b, stderr_b = getattr(exec_result, "output", (b"", b"")) or (b"", b"")
+
+    stdout = (stdout_b or b"").decode("utf-8", errors="replace")
+    stderr = (stderr_b or b"").decode("utf-8", errors="replace")
+
+    return InstallPackagesResponse(exit_code=exit_code, stdout=stdout, stderr=stderr)

@@ -44,11 +44,25 @@ def main():
     print("Created sandbox:", sandbox_id)
 
     try:
+        # 2) Install a package (example: requests)
+        status, payload = _request(
+            "POST",
+            f"{base}/api/sandboxes/{sandbox_id}/packages",
+            {"packages": ["requests==2.32.3"]},
+            timeout=300,
+        )
+        if status != 200:
+            print("Install packages failed:", status, payload)
+            return 1
+        print("Installed packages")
+
         # 2) Upload a Python file
         code = """\
 import sys
+import requests
 print('hello from sandbox')
 print('argv:', sys.argv[1:])
+print('requests version:', requests.__version__)
 """
         status, payload = _request(
             "POST",

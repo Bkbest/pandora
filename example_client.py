@@ -81,6 +81,17 @@ print('requests version:', requests.__version__)
             return 1
         print("Uploaded main.py")
 
+        # 2b) Create a nested file to demonstrate directory-based listing
+        status, payload = _request(
+            "POST",
+            f"{base}/api/sandboxes/{sandbox_id}/files",
+            {"path": "project/hello.py", "content": "print('hello from /project')\n"},
+        )
+        if status != 200:
+            print("Upsert nested file failed:", status, payload)
+            return 1
+        print("Uploaded project/hello.py")
+
         # 3) Execute
         status, payload = _request(
             "POST",
@@ -95,11 +106,20 @@ print('requests version:', requests.__version__)
         print(json.dumps(payload, indent=2))
 
         # 4) List files
-        status, payload = _request("GET", f"{base}/api/sandboxes/{sandbox_id}/files")
+        status, payload = _request("GET", f"{base}/api/sandboxes/{sandbox_id}/files?dir=/")
         if status != 200:
             print("List files failed:", status, payload)
             return 1
-        print("Files:")
+        print("Files (dir=/):")
+        for f in payload.get("files", []):
+            print("-", f)
+
+        # 4b) List files under /project only
+        status, payload = _request("GET", f"{base}/api/sandboxes/{sandbox_id}/files?dir=/project")
+        if status != 200:
+            print("List /project files failed:", status, payload)
+            return 1
+        print("Files (dir=/project):")
         for f in payload.get("files", []):
             print("-", f)
 

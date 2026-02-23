@@ -6,7 +6,7 @@ from typing import List, Optional
 
 import docker
 from docker.models.containers import Container
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from pydantic import BaseModel, Field
 
 
@@ -107,6 +107,7 @@ def doc() -> dict:
                 "method": "GET",
                 "path": "/api/sandboxes/{id}/files",
                 "description": "List files in the sandbox workspace directory",
+                "query": {"dir": "/"},
                 "response": {"files": ["main.py", "src/util.py"]},
             },
             {
@@ -190,14 +191,18 @@ def delete_sandbox(sandbox_id: str) -> dict:
 
 
 @app.get("/api/sandboxes/{sandbox_id}/files", response_model=ListFilesResponse)
-def list_files(sandbox_id: str) -> ListFilesResponse:
+def list_files(sandbox_id: str, dir: str = Query(default="/", description="Directory within the sandbox to list")) -> ListFilesResponse:
     base = _sandbox_dir(sandbox_id)
     if not base.exists():
         _get_container(sandbox_id)
         raise HTTPException(status_code=404, detail="Sandbox directory missing")
 
+    list_dir = _safe_path(base, dir)
+    if not list_dir.exists() or not list_dir.is_dir():
+        raise HTTPException(status_code=404, detail="Directory not found")
+
     files: List[str] = []
-    for p in base.rglob("*"):
+    for p in list_dir.rglob("*"):
         if p.is_file():
             files.append(str(p.relative_to(base)).replace("\\", "/"))
 

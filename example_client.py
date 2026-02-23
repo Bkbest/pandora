@@ -54,6 +54,13 @@ def main():
         if status != 200:
             print("Install packages failed:", status, payload)
             return 1
+        if not isinstance(payload, dict) or payload.get("exit_code", 1) != 0:
+            print("Install packages returned non-zero:", payload)
+            return 1
+        if payload.get("stdout"):
+            print("pip stdout:\n", payload.get("stdout"))
+        if payload.get("stderr"):
+            print("pip stderr:\n", payload.get("stderr"))
         print("Installed packages")
 
         # 2) Upload a Python file

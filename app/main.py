@@ -15,6 +15,7 @@ SANDBOX_ROOT = Path(os.environ.get("SANDBOX_ROOT", str(APP_ROOT / "sandboxes")))
 DOCKER_IMAGE = os.environ.get("SANDBOX_PYTHON_IMAGE", "python:3.11-slim")
 CONTAINER_PREFIX = os.environ.get("SANDBOX_CONTAINER_PREFIX", "code-sandbox")
 WORKDIR_IN_CONTAINER = "/workspace"
+NETWORK_DISABLED = os.environ.get("SANDBOX_NETWORK_DISABLED", "0").lower() in ("1", "true", "yes")
 
 client = docker.from_env()
 app = FastAPI()
@@ -161,7 +162,7 @@ def create_sandbox() -> CreateSandboxResponse:
             name=name,
             detach=True,
             tty=False,
-            network_disabled=True,
+            network_disabled=NETWORK_DISABLED,
             read_only=True,
             security_opt=["no-new-privileges"],
             user="1000:1000",
@@ -298,5 +299,20 @@ def install_packages(sandbox_id: str, req: InstallPackagesRequest) -> InstallPac
 
     stdout = (stdout_b or b"").decode("utf-8", errors="replace")
     stderr = (stderr_b or b"").decode("utf-8", errors="replace")
+
+    if exit_code != 0:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "message": "Package installation failed",
+                "exit_code": exit_code,
+                "stdout": stdout,
+                "stderr": stderr,
+                "note": (
+                    "If this is a network error and you want to allow pip downloads, run the service with "
+                    "SANDBOX_NETWORK_DISABLED=0 (default)."
+                ),
+            },
+        )
 
     return InstallPackagesResponse(exit_code=exit_code, stdout=stdout, stderr=stderr)

@@ -74,6 +74,55 @@ def _ensure_root() -> None:
     SANDBOX_ROOT.mkdir(parents=True, exist_ok=True)
 
 
+@app.get("/doc")
+def doc() -> dict:
+    return {
+        "service": "code-sandbox",
+        "language": "python",
+        "endpoints": [
+            {
+                "method": "POST",
+                "path": "/api/sandboxes",
+                "description": "Create a new sandbox (workspace directory + docker container)",
+                "response": {"id": "<sandbox_id>"},
+            },
+            {
+                "method": "DELETE",
+                "path": "/api/sandboxes/{id}",
+                "description": "Remove a sandbox (docker container + workspace directory)",
+                "response": {"ok": True},
+            },
+            {
+                "method": "GET",
+                "path": "/api/sandboxes/{id}/files",
+                "description": "List files in the sandbox workspace directory",
+                "response": {"files": ["main.py", "src/util.py"]},
+            },
+            {
+                "method": "POST",
+                "path": "/api/sandboxes/{id}/files",
+                "description": "Create or update a file in the sandbox workspace",
+                "request": {"path": "main.py", "content": "print('hello')\n"},
+                "response": {"ok": True},
+            },
+            {
+                "method": "DELETE",
+                "path": "/api/sandboxes/{id}/files/{path}",
+                "description": "Delete a file from the sandbox workspace",
+                "response": {"ok": True},
+            },
+            {
+                "method": "POST",
+                "path": "/api/sandboxes/{id}/execute",
+                "description": "Execute a .py file inside the sandbox container",
+                "request": {"path": "main.py", "args": ["--foo", "bar"]},
+                "response": {"exit_code": 0, "stdout": "...", "stderr": "..."},
+                "notes": ["Only .py files can be executed"],
+            },
+        ],
+    }
+
+
 @app.post("/api/sandboxes", response_model=CreateSandboxResponse)
 def create_sandbox() -> CreateSandboxResponse:
     _ensure_root()

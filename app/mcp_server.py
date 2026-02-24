@@ -45,15 +45,21 @@ def create_sandbox() -> dict:
     """Create a new sandbox.
 
     Creates:
-    - A sandbox workspace directory on the host
-    - A dedicated Docker container with the workspace bind-mounted
+    - A sandbox workspace directory on host
+    - A dedicated Docker container with workspace bind-mounted
 
     Returns:
     - id: sandbox identifier
+    
+    Errors:
+    - error: error message if creation fails
     """
 
-    sandbox_id = manager.create_sandbox()
-    return {"id": sandbox_id}
+    try:
+        sandbox_id = manager.create_sandbox()
+        return {"success": True, "id": sandbox_id}
+    except Exception as e:
+        return {"success": False, "error": str(e), "error_type": type(e).__name__}
 
 
 @mcp.tool()
@@ -63,10 +69,16 @@ def delete_sandbox(id: str) -> dict:
     Removes:
     - The Docker container for the sandbox
     - The sandbox workspace directory (including uploaded files and installed packages)
+    
+    Errors:
+    - error: error message if deletion fails
     """
 
-    manager.delete_sandbox(id)
-    return {"ok": True}
+    try:
+        manager.delete_sandbox(id)
+        return {"success": True, "message": "Sandbox deleted successfully"}
+    except Exception as e:
+        return {"success": False, "error": str(e), "error_type": type(e).__name__}
 
 
 @mcp.tool()
@@ -79,32 +91,52 @@ def list_sandbox_files(id: str, dir: str = "/") -> dict:
 
     Returns:
     - files: list of file paths relative to the sandbox root
+    
+    Errors:
+    - error: error message if listing fails
     """
 
-    files = manager.list_files(id, dir)
-    return {"files": files}
+    try:
+        files = manager.list_files(id, dir)
+        return {"success": True, "files": files}
+    except Exception as e:
+        return {"success": False, "error": str(e), "error_type": type(e).__name__}
 
 
 @mcp.tool()
 def upsert_file(id: str, path: str, content: str) -> dict:
-    """Create or update a file in the sandbox workspace."""
+    """Create or update a file in the sandbox workspace.
+    
+    Errors:
+    - error: error message if file operation fails
+    """
 
-    manager.upsert_file(id, path, content)
-    return {"ok": True}
+    try:
+        manager.upsert_file(id, path, content)
+        return {"success": True, "message": f"File '{path}' created/updated successfully"}
+    except Exception as e:
+        return {"success": False, "error": str(e), "error_type": type(e).__name__}
 
 
 @mcp.tool()
 def delete_file(id: str, path: str) -> dict:
-    """Delete a file from the sandbox workspace."""
+    """Delete a file from the sandbox workspace.
+    
+    Errors:
+    - error: error message if deletion fails
+    """
 
-    manager.delete_file(id, path)
-    return {"ok": True}
+    try:
+        manager.delete_file(id, path)
+        return {"success": True, "message": f"File '{path}' deleted successfully"}
+    except Exception as e:
+        return {"success": False, "error": str(e), "error_type": type(e).__name__}
 
 
 @mcp.tool()
 def execute(id: str, path: str = "main.py", args: List[str] | None = None) -> dict:
     """Execute a Python file inside the sandbox container.
-
+    
     Only `.py` files can be executed.
 
     Args:
@@ -114,16 +146,35 @@ def execute(id: str, path: str = "main.py", args: List[str] | None = None) -> di
 
     Returns:
     - exit_code, stdout, stderr
+    
+    Errors:
+    - error: error message if execution fails
     """
 
-    exit_code, stdout, stderr = manager.execute(id, path, args or [])
-    return {"exit_code": exit_code, "stdout": stdout, "stderr": stderr}
+    try:
+        exit_code, stdout, stderr = manager.execute(id, path, args or [])
+        return {
+            "success": True,
+            "exit_code": exit_code,
+            "stdout": stdout,
+            "stderr": stderr,
+            "message": "Execution completed"
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e),
+            "error_type": type(e).__name__,
+            "exit_code": -1,
+            "stdout": "",
+            "stderr": str(e)
+        }
 
 
 @mcp.tool()
 def install_packages(id: str, packages: List[str]) -> dict:
     """Install Python packages into the sandbox.
-
+    
     Packages are installed using pip into `/workspace/.python_packages` so they persist for the sandbox.
     The execute tool sets `PYTHONPATH` accordingly.
 
@@ -133,10 +184,29 @@ def install_packages(id: str, packages: List[str]) -> dict:
 
     Returns:
     - exit_code, stdout, stderr
+    
+    Errors:
+    - error: error message if installation fails
     """
 
-    exit_code, stdout, stderr = manager.install_packages(id, packages)
-    return {"exit_code": exit_code, "stdout": stdout, "stderr": stderr}
+    try:
+        exit_code, stdout, stderr = manager.install_packages(id, packages)
+        return {
+            "success": True,
+            "exit_code": exit_code,
+            "stdout": stdout,
+            "stderr": stderr,
+            "message": f"Package installation completed for: {', '.join(packages)}"
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e),
+            "error_type": type(e).__name__,
+            "exit_code": -1,
+            "stdout": "",
+            "stderr": str(e)
+        }
 
 
 @contextlib.asynccontextmanager

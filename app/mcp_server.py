@@ -70,7 +70,7 @@ def delete_sandbox(id: str) -> dict:
 
 
 @mcp.tool()
-def list_files(id: str, dir: str = "/") -> dict:
+def list_sandbox_files(id: str, dir: str = "/") -> dict:
     """List files in a sandbox.
 
     Args:

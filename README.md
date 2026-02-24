@@ -4,6 +4,12 @@ A minimal HTTP service that provides per-sandbox file storage + **Python-only** 
 
 This is intended to be used as an execution backend for AI agents that generate code.
 
+## License
+
+This project is licensed under the GNU General Public License v3.0. See the [LICENSE](LICENSE) file for details.
+
+**Important**: Any derivative works must also be open source under GPL v3. If you modify or build upon this software, you must make your changes available under the same license.
+
 ## Requirements
 
 - Docker installed and running on the host (e.g. Raspberry Pi)

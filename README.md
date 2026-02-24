@@ -50,11 +50,41 @@ Tools available:
 
 - `create_sandbox`
 - `delete_sandbox`
-- `list_files`
+- `list_sandbox_files`
 - `upsert_file`
 - `delete_file`
+- `read_file_from_sandbox` - Read contents of a file from the sandbox workspace
 - `execute`
 - `install_packages`
+
+### MCP Tool Response Format
+
+All MCP tools return consistent JSON responses with the following structure:
+
+**Success responses:**
+```json
+{
+  "success": true,
+  "...": "tool-specific data",
+  "message": "descriptive success message"
+}
+```
+
+**Error responses:**
+```json
+{
+  "success": false,
+  "error": "human-readable error message",
+  "error_type": "ExceptionClassName",
+  "...": "tool-specific fallback data"
+}
+```
+
+This allows agents to:
+1. Check the `success` field first
+2. Handle different `error_type` values programmatically  
+3. Access detailed error information for debugging
+4. Continue processing with fallback logic
 
 ### LangGraph integration (example)
 

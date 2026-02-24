@@ -21,6 +21,86 @@ pip install -r requirements.txt
 uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 
+## Run as an MCP server
+
+This repo also provides an MCP server exposing the same sandbox operations as MCP tools.
+
+Start it (Streamable HTTP transport):
+
+```bash
+python -m app.mcp_server
+```
+
+By default it listens on `0.0.0.0:3000` and serves MCP at:
+
+- `http://<host>:3000/mcp`
+
+Configuration:
+
+- `MCP_HOST` (default `0.0.0.0`)
+- `MCP_PORT` (default `3000`)
+
+Tools available:
+
+- `create_sandbox`
+- `delete_sandbox`
+- `list_files`
+- `upsert_file`
+- `delete_file`
+- `execute`
+- `install_packages`
+
+### LangGraph integration (example)
+
+You can load MCP tools into LangGraph/LangChain using `langchain-mcp-adapters`.
+
+Install in your LangGraph app:
+
+```bash
+pip install langchain-mcp-adapters
+```
+
+Example (async) using `MultiServerMCPClient`:
+
+```python
+import asyncio
+
+from langchain_mcp_adapters.client import MultiServerMCPClient
+from langgraph.prebuilt import create_react_agent
+from langchain.chat_models import init_chat_model
+
+
+async def main():
+    client = MultiServerMCPClient(
+        {
+            "pandora_sandbox": {
+                "transport": "http",
+                "url": "http://127.0.0.1:3000/mcp",
+            }
+        }
+    )
+
+    tools = await client.get_tools()
+    model = init_chat_model("openai:gpt-4o-mini")
+
+    agent = create_react_agent(model, tools)
+    result = await agent.ainvoke(
+        {
+            "messages": [
+                (
+                    "user",
+                    "Create a sandbox, write main.py that prints hello, execute it, then delete the sandbox.",
+                )
+            ]
+        }
+    )
+    print(result)
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
+```
+
 ## Configuration
 
 Environment variables:

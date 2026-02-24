@@ -208,6 +208,25 @@ Notes:
 - The workspace is bind-mounted into the container at `/workspace`.
 - Execution is done via Docker `exec` using `python /workspace/<path>`.
 
+## Troubleshooting
+
+### Docker permission errors
+
+If you encounter this error during startup:
+
+```
+docker.errors.DockerException: Error while fetching server API version: ('Connection aborted.', PermissionError(13, 'Permission denied'))
+```
+
+Run these commands to allow Docker commands without sudo:
+
+```bash
+sudo usermod -aG docker $USER
+newgrp docker
+```
+
+Verify by running `docker ps` - there should be no permission errors.
+
 ## Security notes (minimal hardening)
 
 Containers are started with:

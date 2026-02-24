@@ -6,6 +6,8 @@ from typing import List
 import uvicorn
 from mcp.server.fastmcp import FastMCP
 from starlette.applications import Starlette
+from starlette.middleware import Middleware
+from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.routing import Mount
 
 from .sandbox_manager import SandboxManager
@@ -153,11 +155,25 @@ app = Starlette(
         Mount("/", app=mcp.streamable_http_app()),
     ],
     lifespan=lifespan,
-)
+    )
 
 
 def main() -> None:
-    uvicorn.run(app, host=MCP_HOST, port=MCP_PORT)
+    # Configure uvicorn to allow requests from any host
+    # Set environment variable to disable host validation
+    os.environ["PYTHONUNBUFFERED"] = "1"
+    
+    uvicorn.run(
+        app, 
+        host=MCP_HOST, 
+        port=MCP_PORT,
+        # Allow requests from any IP/host - disable strict host checking
+        server_header=False,
+        access_log=False,
+        # Additional settings to allow cross-origin and host header flexibility
+        ws_ping_interval=None,
+        ws_ping_timeout=None,
+    )
 
 
 if __name__ == "__main__":

@@ -134,6 +134,40 @@ def delete_file(id: str, path: str) -> dict:
 
 
 @mcp.tool()
+def read_file_from_sandbox(id: str, path: str) -> dict:
+    """Read the contents of a file from the sandbox workspace.
+    
+    Args:
+    - id: sandbox identifier
+    - path: path to the file in the sandbox workspace
+    
+    Returns:
+    - content: file contents as text
+    - size: file size in bytes
+    
+    Errors:
+    - error: error message if file read fails
+    """
+
+    try:
+        content = manager.read_file(id, path)
+        return {
+            "success": True,
+            "content": content,
+            "size": len(content.encode('utf-8')),
+            "message": f"File '{path}' read successfully"
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e),
+            "error_type": type(e).__name__,
+            "content": "",
+            "size": 0
+        }
+
+
+@mcp.tool()
 def execute(id: str, path: str = "main.py", args: List[str] | None = None) -> dict:
     """Execute a Python file inside the sandbox container.
     

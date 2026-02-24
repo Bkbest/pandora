@@ -130,6 +130,20 @@ class SandboxManager:
         if target.exists() and target.is_file():
             target.unlink()
 
+    def read_file(self, sandbox_id: str, file_path: str) -> str:
+        base = self.sandbox_dir(sandbox_id)
+        if not base.exists():
+            self.get_container(sandbox_id)
+            raise HTTPException(status_code=404, detail="Sandbox directory missing")
+
+        target = self.safe_path(base, file_path)
+        if not target.exists():
+            raise HTTPException(status_code=404, detail="File not found")
+        if not target.is_file():
+            raise HTTPException(status_code=400, detail="Path is not a file")
+        
+        return target.read_text(encoding="utf-8")
+
     def execute(self, sandbox_id: str, path: str, args: List[str]) -> Tuple[int, str, str]:
         if not path.endswith(".py"):
             raise HTTPException(status_code=400, detail="Only .py files can be executed")

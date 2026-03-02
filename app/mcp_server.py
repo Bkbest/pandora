@@ -243,6 +243,41 @@ def install_packages(id: str, packages: List[str]) -> dict:
         }
 
 
+@mcp.tool()
+def list_running_sandboxes() -> dict:
+    """List all running sandboxes with their status and metadata.
+    
+    Returns:
+    - sandboxes: list of sandbox information including:
+      - id: sandbox identifier
+      - container_name: Docker container name
+      - status: container status (running, exited, etc.)
+      - created: container creation timestamp
+      - directory_exists: whether the sandbox directory exists on the host
+      - image: Docker image used for the sandbox
+    
+    Errors:
+    - error: error message if listing fails
+    """
+
+    try:
+        sandboxes = manager.list_running_sandboxes()
+        return {
+            "success": True,
+            "sandboxes": sandboxes,
+            "count": len(sandboxes),
+            "message": f"Found {len(sandboxes)} sandbox(es)"
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e),
+            "error_type": type(e).__name__,
+            "sandboxes": [],
+            "count": 0
+        }
+
+
 @contextlib.asynccontextmanager
 async def lifespan(app: Starlette):
     async with mcp.session_manager.run():

@@ -230,3 +230,47 @@ class SandboxManager:
             )
 
         return exit_code, stdout, stderr
+
+    def list_running_sandboxes(self) -> List[dict]:
+        """List all running sandboxes with their status and metadata."""
+        try:
+            containers = self.client.containers.list(
+                all=True,
+                filters={"name": f"{self.container_prefix}-"}
+            )
+            
+            sandboxes = []
+            for container in containers:
+                # Extract sandbox ID from container name
+                container_name = container.name
+                if container_name.startswith(f"{self.container_prefix}-"):
+                    sandbox_id = container_name[len(self.container_prefix) + 1:]
+                    
+                    # Get sandbox directory info
+                    sandbox_dir = self.sandbox_dir(sandbox_id)
+                    dir_exists = sandbox_dir.exists()
+                    
+                    # Get container status
+                    status = container.status
+                    
+                    # Get container creation time
+                    created = container.attrs.get("Created", "")
+                    
+                    # Get container stats
+                    container_info = {
+                        "id": sandbox_id,
+                        "container_name": container_name,
+                        "status": status,
+                        "created": created,
+                        "directory_exists": dir_exists,
+                        "image": container.image.tags[0] if container.image.tags else self.docker_image,
+                    }
+                    
+                    sandboxes.append(container_info)
+            
+            # Sort by creation time (newest first)
+            sandboxes.sort(key=lambda x: x.get("created", ""), reverse=True)
+            return sandboxes
+            
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to list sandboxes: {str(e)}")

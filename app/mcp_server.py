@@ -41,8 +41,11 @@ mcp = FastMCP(
 
 
 @mcp.tool()
-def create_sandbox() -> dict:
+def create_sandbox(sandbox_name: str ) -> dict:
     """Create a new sandbox.
+
+    Args:
+    - sandbox_name: short meaningful name for the sandbox (will be sanitized and appended to the ID)
 
     Creates:
     - A sandbox workspace directory on host
@@ -56,7 +59,7 @@ def create_sandbox() -> dict:
     """
 
     try:
-        sandbox_id = manager.create_sandbox()
+        sandbox_id = manager.create_sandbox(sandbox_name)
         return {"success": True, "id": sandbox_id}
     except Exception as e:
         return {"success": False, "error": str(e), "error_type": type(e).__name__}

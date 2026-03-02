@@ -53,10 +53,18 @@ class SandboxManager:
         except docker.errors.NotFound:
             raise HTTPException(status_code=404, detail="Sandbox not found")
 
-    def create_sandbox(self) -> str:
+    def create_sandbox(self, sandbox_name: str) -> str:
         self.ensure_root()
 
-        sandbox_id = uuid.uuid4().hex
+        # Generate unique ID and append sandbox_name if provided
+        unique_id = uuid.uuid4().hex
+        if sandbox_name:
+            # Sanitize sandbox_name to be filesystem and container-name friendly
+            sanitized_name = "".join(c for c in sandbox_name if c.isalnum() or c in ('-', '_')).rstrip('-_')
+            sandbox_id = f"{unique_id}-{sanitized_name}"
+        else:
+            sandbox_id = unique_id
+        
         host_dir = self.sandbox_dir(sandbox_id)
         host_dir.mkdir(parents=True, exist_ok=False)
 

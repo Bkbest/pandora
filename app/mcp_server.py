@@ -9,7 +9,7 @@ from starlette.applications import Starlette
 
 from starlette.routing import Mount
 
-from sandbox_manager import SandboxManager
+from service.sandbox_manager import SandboxManager
 
 
 APP_ROOT = Path(__file__).resolve().parent.parent

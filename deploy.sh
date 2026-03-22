@@ -18,7 +18,6 @@ fi
 python3 -m venv "$VENV_DIR"
 "$VENV_DIR/bin/pip" install --upgrade pip
 "$VENV_DIR/bin/pip" install -r "$APP_DIR/requirements.txt"
-"$VENV_DIR/bin/pip" install -e "$APP_DIR/../../"
 
 if ! groups "$RUN_USER" | grep -q "\bdocker\b"; then
   echo "User '$RUN_USER' is not in the 'docker' group. Adding it now (requires sudo)."

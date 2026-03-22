@@ -152,34 +152,31 @@ class SandboxManager:
         
         return target.read_text(encoding="utf-8")
 
-    def execute(self, sandbox_id: str, path: str, args: List[str]) -> Tuple[int, str, str]:
-        if not path.endswith(".py"):
-            raise HTTPException(status_code=400, detail="Only .py files can be executed")
-
+    def execute(self, sandbox_id: str, command: str, args: List[str] | None = None) -> Tuple[int, str, str]:
+        """Execute a bash command inside the sandbox container.
+        
+        Args:
+            sandbox_id: sandbox identifier
+            command: the bash command to execute (e.g., 'python', 'ls', 'cat')
+            args: command-line arguments passed to the command
+            
+        Returns:
+            Tuple of (exit_code, stdout, stderr)
+        """
         base = self.sandbox_dir(sandbox_id)
         if not base.exists():
             self.get_container(sandbox_id)
             raise HTTPException(status_code=404, detail="Sandbox directory missing")
 
-        target = self.safe_path(base, path)
-        if not target.exists() or not target.is_file():
-            raise HTTPException(status_code=404, detail="File not found")
-
         container = self.get_container(sandbox_id)
 
-        cmd = [
-            "python",
-            str(Path(self.workdir_in_container) / path).replace("\\", "/"),
-            *args,
-        ]
+        cmd = [command] + (args or [])
 
-        pkg_dir = str(Path(self.workdir_in_container) / ".python_packages").replace("\\", "/")
         exec_result = container.exec_run(
             cmd,
             stdout=True,
             stderr=True,
             demux=True,
-            environment={"PYTHONPATH": pkg_dir},
         )
 
         exit_code = int(getattr(exec_result, "exit_code", 1))
@@ -187,55 +184,6 @@ class SandboxManager:
 
         stdout = (stdout_b or b"").decode("utf-8", errors="replace")
         stderr = (stderr_b or b"").decode("utf-8", errors="replace")
-
-        return exit_code, stdout, stderr
-
-    def install_packages(self, sandbox_id: str, packages: List[str]) -> Tuple[int, str, str]:
-        if not packages:
-            raise HTTPException(status_code=400, detail="No packages provided")
-
-        base = self.sandbox_dir(sandbox_id)
-        if not base.exists():
-            self.get_container(sandbox_id)
-            raise HTTPException(status_code=404, detail="Sandbox directory missing")
-
-        container = self.get_container(sandbox_id)
-
-        target_dir = str(Path(self.workdir_in_container) / ".python_packages").replace("\\", "/")
-        cmd = [
-            "python",
-            "-m",
-            "pip",
-            "install",
-            "--no-cache-dir",
-            "--disable-pip-version-check",
-            "--target",
-            target_dir,
-            *packages,
-        ]
-
-        exec_result = container.exec_run(cmd, stdout=True, stderr=True, demux=True)
-
-        exit_code = int(getattr(exec_result, "exit_code", 1))
-        stdout_b, stderr_b = getattr(exec_result, "output", (b"", b"")) or (b"", b"")
-
-        stdout = (stdout_b or b"").decode("utf-8", errors="replace")
-        stderr = (stderr_b or b"").decode("utf-8", errors="replace")
-
-        if exit_code != 0:
-            raise HTTPException(
-                status_code=400,
-                detail={
-                    "message": "Package installation failed",
-                    "exit_code": exit_code,
-                    "stdout": stdout,
-                    "stderr": stderr,
-                    "note": (
-                        "If this is a network error and you want to allow pip downloads, run the service with "
-                        "SANDBOX_NETWORK_DISABLED=0 (default)."
-                    ),
-                },
-            )
 
         return exit_code, stdout, stderr
 

@@ -25,6 +25,18 @@ if ! groups "$RUN_USER" | grep -q "\bdocker\b"; then
   echo "Re-login may be required for docker group membership to take effect."
 fi
 
+# Check and build Docker image if needed
+DOCKER_IMAGE="${SANDBOX_PYTHON_IMAGE:-sandbox-python}"
+if ! docker image inspect "$DOCKER_IMAGE" >/dev/null 2>&1; then
+    echo "Docker image '$DOCKER_IMAGE' not found. Building..."
+    if [[ -f "$APP_DIR/Dockerfile.alpine" ]]; then
+        docker build -t "$DOCKER_IMAGE" -f "$APP_DIR/Dockerfile.alpine" "$APP_DIR"
+    else
+        echo "Error: Dockerfile.alpine not found in $APP_DIR"
+        exit 1
+    fi
+fi
+
 UNIT_PATH="/etc/systemd/system/${SERVICE_NAME}.service"
 MCP_UNIT_PATH="/etc/systemd/system/${MCP_SERVICE_NAME}.service"
 
@@ -58,6 +70,7 @@ Type=simple
 User=${RUN_USER}
 WorkingDirectory=${APP_DIR}
 Environment=SANDBOX_ROOT=${APP_DIR}/sandboxes
+Environment=SANDBOX_PYTHON_IMAGE=${DOCKER_IMAGE}
 Environment=MCP_HOST=0.0.0.0
 Environment=MCP_PORT=${MCP_PORT}
 ExecStart=${VENV_DIR}/bin/python -m app.mcp_server

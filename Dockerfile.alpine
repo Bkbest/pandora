@@ -1,0 +1,15 @@
+FROM alpine:3.19
+
+# Install Python and pip
+RUN apk add --no-cache python3 py3-pip
+
+# Create a workspace directory
+WORKDIR /workspace
+
+# Set Python to use UTF-8
+ENV PYTHONIOENCODING=utf-8 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+# Default command
+CMD ["python3"]

@@ -6,8 +6,7 @@ from typing import List
 import uvicorn
 from mcp.server.fastmcp import FastMCP
 from starlette.applications import Starlette
-from starlette.middleware import Middleware
-from starlette.middleware.base import BaseHTTPMiddleware
+
 from starlette.routing import Mount
 
 from sandbox_manager import SandboxManager
@@ -15,7 +14,7 @@ from sandbox_manager import SandboxManager
 
 APP_ROOT = Path(__file__).resolve().parent.parent
 SANDBOX_ROOT = Path(os.environ.get("SANDBOX_ROOT", str(APP_ROOT / "sandboxes"))).resolve()
-DOCKER_IMAGE = os.environ.get("SANDBOX_PYTHON_IMAGE", "python:3.11-slim")
+DOCKER_IMAGE = os.environ.get("SANDBOX_PYTHON_IMAGE", "sandbox-python")
 CONTAINER_PREFIX = os.environ.get("SANDBOX_CONTAINER_PREFIX", "code-sandbox")
 WORKDIR_IN_CONTAINER = "/workspace"
 NETWORK_DISABLED = os.environ.get("SANDBOX_NETWORK_DISABLED", "0").lower() in ("1", "true", "yes")
@@ -85,101 +84,16 @@ def delete_sandbox(id: str) -> dict:
 
 
 @mcp.tool()
-def list_sandbox_files(id: str, dir: str = "/") -> dict:
-    """List files in a sandbox.
+def execute(sandbox_id: str, command: str, args: List[str] | None = None) -> dict:
+    """Execute a bash command inside a sandbox.
+    
+    This is a general-purpose tool that can run any command in the sandbox.
+    Use 'ls', 'cat', 'mkdir', 'rm', 'python', 'pip', 'curl', etc. as the command.
 
     Args:
-    - id: sandbox identifier
-    - dir: directory within the sandbox workspace (e.g. '/', '/project')
-
-    Returns:
-    - files: list of file paths relative to the sandbox root
-    
-    Errors:
-    - error: error message if listing fails
-    """
-
-    try:
-        files = manager.list_files(id, dir)
-        return {"success": True, "files": files}
-    except Exception as e:
-        return {"success": False, "error": str(e), "error_type": type(e).__name__}
-
-
-@mcp.tool()
-def upsert_file(id: str, path: str, content: str) -> dict:
-    """Create or update a file in the sandbox workspace.
-    
-    Errors:
-    - error: error message if file operation fails
-    """
-
-    try:
-        manager.upsert_file(id, path, content)
-        return {"success": True, "message": f"File '{path}' created/updated successfully"}
-    except Exception as e:
-        return {"success": False, "error": str(e), "error_type": type(e).__name__}
-
-
-@mcp.tool()
-def delete_file(id: str, path: str) -> dict:
-    """Delete a file from the sandbox workspace.
-    
-    Errors:
-    - error: error message if deletion fails
-    """
-
-    try:
-        manager.delete_file(id, path)
-        return {"success": True, "message": f"File '{path}' deleted successfully"}
-    except Exception as e:
-        return {"success": False, "error": str(e), "error_type": type(e).__name__}
-
-
-@mcp.tool()
-def read_file_from_sandbox(id: str, path: str) -> dict:
-    """Read the contents of a file from the sandbox workspace.
-    
-    Args:
-    - id: sandbox identifier
-    - path: path to the file in the sandbox workspace
-    
-    Returns:
-    - content: file contents as text
-    - size: file size in bytes
-    
-    Errors:
-    - error: error message if file read fails
-    """
-
-    try:
-        content = manager.read_file(id, path)
-        return {
-            "success": True,
-            "content": content,
-            "size": len(content.encode('utf-8')),
-            "message": f"File '{path}' read successfully"
-        }
-    except Exception as e:
-        return {
-            "success": False,
-            "error": str(e),
-            "error_type": type(e).__name__,
-            "content": "",
-            "size": 0
-        }
-
-
-@mcp.tool()
-def execute(id: str, path: str = "main.py", args: List[str] | None = None) -> dict:
-    """Execute a Python file inside the sandbox container.
-    
-    Only `.py` files can be executed.
-
-    Args:
-    - id: sandbox identifier
-    - path: path to a `.py` file in the sandbox workspace
-    - args: command-line args passed to the Python program
+    - sandbox_id: sandbox identifier
+    - command: the bash command to execute (e.g., 'python', 'ls', 'cat', 'mkdir')
+    - args: command-line arguments passed to the command
 
     Returns:
     - exit_code, stdout, stderr
@@ -187,53 +101,14 @@ def execute(id: str, path: str = "main.py", args: List[str] | None = None) -> di
     Errors:
     - error: error message if execution fails
     """
-
     try:
-        exit_code, stdout, stderr = manager.execute(id, path, args or [])
+        exit_code, stdout, stderr = manager.execute(sandbox_id, command, args or [])
         return {
             "success": True,
             "exit_code": exit_code,
             "stdout": stdout,
             "stderr": stderr,
             "message": "Execution completed"
-        }
-    except Exception as e:
-        return {
-            "success": False,
-            "error": str(e),
-            "error_type": type(e).__name__,
-            "exit_code": -1,
-            "stdout": "",
-            "stderr": str(e)
-        }
-
-
-@mcp.tool()
-def install_packages(id: str, packages: List[str]) -> dict:
-    """Install Python packages into the sandbox.
-    
-    Packages are installed using pip into `/workspace/.python_packages` so they persist for the sandbox.
-    The execute tool sets `PYTHONPATH` accordingly.
-
-    Args:
-    - id: sandbox identifier
-    - packages: pip requirement strings, e.g. ['requests==2.32.3', 'numpy']
-
-    Returns:
-    - exit_code, stdout, stderr
-    
-    Errors:
-    - error: error message if installation fails
-    """
-
-    try:
-        exit_code, stdout, stderr = manager.install_packages(id, packages)
-        return {
-            "success": True,
-            "exit_code": exit_code,
-            "stdout": stdout,
-            "stderr": stderr,
-            "message": f"Package installation completed for: {', '.join(packages)}"
         }
     except Exception as e:
         return {
@@ -302,6 +177,19 @@ app = Starlette(
 
 
 def main() -> None:
+    # Verify Docker image exists before starting
+    import subprocess
+    result = subprocess.run(
+        ["docker", "image", "inspect", DOCKER_IMAGE],
+        capture_output=True,
+        text=True
+    )
+    if result.returncode != 0:
+        raise RuntimeError(
+            f"Docker image '{DOCKER_IMAGE}' not found. "
+            f"Please build the image before starting the server."
+        )
+
     # Configure uvicorn to allow requests from any host
     # Set environment variable to disable host validation
     os.environ["PYTHONUNBUFFERED"] = "1"

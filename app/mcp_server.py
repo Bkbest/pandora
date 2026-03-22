@@ -10,7 +10,7 @@ from starlette.middleware import Middleware
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.routing import Mount
 
-from .sandbox_manager import SandboxManager
+from sandbox_manager import SandboxManager
 
 
 APP_ROOT = Path(__file__).resolve().parent.parent

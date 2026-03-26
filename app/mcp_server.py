@@ -84,16 +84,58 @@ def delete_sandbox(id: str) -> dict:
 
 
 @mcp.tool()
-def execute(sandbox_id: str, command: str, args: List[str] | None = None) -> dict:
+def sandbox_upsert_file(sandbox_id: str, path: str, content: str) -> dict:
+    """Create or update a file in the sandbox workspace.
+    
+    Args:
+    - sandbox_id: sandbox identifier
+    - path: path to the file in the sandbox workspace
+    - content: file content as text
+    
+    Errors:
+    - error: error message if file operation fails
+    """
+
+    try:
+        manager.upsert_file(sandbox_id, path, content)
+        return {"success": True, "message": f"File '{path}' created/updated successfully"}
+    except Exception as e:
+        return {"success": False, "error": str(e), "error_type": type(e).__name__}
+
+
+@mcp.tool()
+def sandbox_delete_file(sandbox_id: str, path: str) -> dict:
+    """Delete a file from the sandbox workspace.
+    
+    Args:
+    - sandbox_id: sandbox identifier
+    - path: path to the file in the sandbox workspace
+    
+    Errors:
+    - error: error message if deletion fails
+    """
+
+    try:
+        manager.delete_file(sandbox_id, path)
+        return {"success": True, "message": f"File '{path}' deleted successfully"}
+    except Exception as e:
+        return {"success": False, "error": str(e), "error_type": type(e).__name__}
+
+
+@mcp.tool()
+def sandbox_execute_bash(sandbox_id: str, command: str, args: List[str] | None = None) -> dict:
     """Execute a bash command inside a sandbox.
     
     This is a general-purpose tool that can run any command in the sandbox.
-    Use 'ls', 'cat', 'mkdir', 'rm', 'python', 'pip', 'curl', etc. as the command.
+    Use 'ls', 'mkdir', 'rm', 'python', 'pip', 'curl', etc. as the command.
+    
+    Note: Use 'tail' to read files in large chunks to avoid overwhelming output.
+    For reading 50 lines starting at line X: tail -n +X filename | head -n 50
 
     Args:
-    - sandbox_id: sandbox identifier
-    - command: the bash command to execute (e.g., 'python', 'ls', 'cat', 'mkdir')
-    - args: command-line arguments passed to the command
+    - sandbox_id (str): sandbox identifier
+    - command (str): the bash command to execute (e.g., 'python', 'ls', 'mkdir')
+    - args (List[str] | None): command-line arguments passed to the command (defaults to None)
 
     Returns:
     - exit_code, stdout, stderr
@@ -102,6 +144,16 @@ def execute(sandbox_id: str, command: str, args: List[str] | None = None) -> dic
     - error: error message if execution fails
     """
     try:
+        # Reject 'cat' command and suggest using tail instead
+        if command.strip().lower() == "cat":
+            return {
+                "success": False,
+                "exit_code": 1,
+                "stdout": "",
+                "stderr": "Use 'tail' to read files in large chunks instead. Example: tail -n +X filename | head -n 50 (reads 50 lines starting at line X)",
+                "message": "cat command not allowed"
+            }
+        
         exit_code, stdout, stderr = manager.execute(sandbox_id, command, args or [])
         return {
             "success": True,

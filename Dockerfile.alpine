@@ -1,15 +1,19 @@
 FROM alpine:3.19
 
-# Install Python and pip
-RUN apk add --no-cache python3 py3-pip
+# Install Python, pip, curl, nodejs, npm, bash, git, and msmtp for email
+RUN apk add --no-cache python3 py3-pip curl nodejs npm bash git msmtp
+
+# Create workspace and packages directories
+RUN mkdir -p /workspace/.packages
+
+# Set Python to use UTF-8 and default pip target
+ENV PYTHONIOENCODING=utf-8 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_TARGET=/workspace/.packages
 
 # Create a workspace directory
 WORKDIR /workspace
-
-# Set Python to use UTF-8
-ENV PYTHONIOENCODING=utf-8 \
-    PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1
 
 # Default command
 CMD ["python3"]

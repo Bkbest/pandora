@@ -100,24 +100,6 @@ class SandboxManager:
         finally:
             shutil.rmtree(self.sandbox_dir(sandbox_id), ignore_errors=True)
 
-    def list_files(self, sandbox_id: str, dir: str) -> List[str]:
-        base = self.sandbox_dir(sandbox_id)
-        if not base.exists():
-            self.get_container(sandbox_id)
-            raise HTTPException(status_code=404, detail="Sandbox directory missing")
-
-        list_dir = self.safe_path(base, dir, allow_base=True)
-        if not list_dir.exists() or not list_dir.is_dir():
-            raise HTTPException(status_code=404, detail="Directory not found")
-
-        files: List[str] = []
-        for p in list_dir.rglob("*"):
-            if p.is_file():
-                files.append(str(p.relative_to(base)).replace("\\", "/"))
-
-        files.sort()
-        return files
-
     def upsert_file(self, sandbox_id: str, path: str, content: str) -> None:
         base = self.sandbox_dir(sandbox_id)
         if not base.exists():
@@ -138,20 +120,6 @@ class SandboxManager:
         if target.exists() and target.is_file():
             target.unlink()
 
-    def read_file(self, sandbox_id: str, file_path: str) -> str:
-        base = self.sandbox_dir(sandbox_id)
-        if not base.exists():
-            self.get_container(sandbox_id)
-            raise HTTPException(status_code=404, detail="Sandbox directory missing")
-
-        target = self.safe_path(base, file_path)
-        if not target.exists():
-            raise HTTPException(status_code=404, detail="File not found")
-        if not target.is_file():
-            raise HTTPException(status_code=400, detail="Path is not a file")
-        
-        return target.read_text(encoding="utf-8")
-
     def execute(self, sandbox_id: str, command: str, args: List[str] | None = None) -> Tuple[int, str, str]:
         """Execute a bash command inside the sandbox container.
         
@@ -170,13 +138,23 @@ class SandboxManager:
 
         container = self.get_container(sandbox_id)
 
-        cmd = [command] + (args or [])
-
+        # Build the full command string
+        full_cmd = command
+        if args:
+            full_cmd += " " + " ".join(args)
+        
+        # Use /bin/sh to properly parse and execute the command with PATH set
+        # Include common Python paths and exclude /tmp to avoid stray virtualenvs
         exec_result = container.exec_run(
-            cmd,
+            ["/bin/sh", "-c", full_cmd],
             stdout=True,
             stderr=True,
             demux=True,
+            environment={
+                "PATH": "/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin",
+                "PYTHONIOENCODING": "utf-8",
+                "PYTHONUNBUFFERED": "1",
+            },
         )
 
         exit_code = int(getattr(exec_result, "exit_code", 1))

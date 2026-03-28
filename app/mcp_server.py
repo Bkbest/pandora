@@ -135,17 +135,17 @@ def sandbox_execute_bash(sandbox_id: str, command: str, args: List[str] | None =
     Args:
     - sandbox_id (str): sandbox identifier
     - command (str): the bash command to execute (e.g., 'python', 'ls', 'mkdir')
-    - args (List[str] | None): command-line arguments passed to the command (defaults to None)
+    - args (List[str] | None): command-line arguments passed to the command (defaults to None)   args=["script.py"] or args=["-la"]
 
     Returns:
     - exit_code, stdout, stderr
-    
+
     Errors:
     - error: error message if execution fails
     """
     try:
         # Reject 'cat' command and suggest using tail instead
-        if command.strip().lower() == "cat":
+        if "cat" in command.lower():
             return {
                 "success": False,
                 "exit_code": 1,
@@ -169,23 +169,21 @@ def sandbox_execute_bash(sandbox_id: str, command: str, args: List[str] | None =
         exit_code, stdout, stderr = manager.execute(sandbox_id, command, args or [])
         
         # Check for stdout/stderr exceeding 500 characters
-        if len(stdout) > 500:
+        if len(stdout) > 3000:
             return {
                 "success": False,
                 "exit_code": exit_code,
-                "stdout": stdout,
-                "stderr": stderr,
-                "error": "output too long. Write the output to a file when executing the bash command and read it using tail few lines at a time. Example: tail -n +X filename | head -n 50 (reads 50 lines starting at line X)",
-                "message": "Output length exceeds 500 characters"
+                "stdout": "",
+                "stderr": "output too long. Write the output to a file when executing the bash command and read it using tail few lines at a time. Example: tail -n +X filename | head -n 50 (reads 50 lines starting at line X)",
+                "message": "Output length exceeds 3000 characters"
             }
-        if len(stderr) > 500:
+        if len(stderr) > 3000:
             return {
                 "success": False,
                 "exit_code": exit_code,
-                "stdout": stdout,
-                "stderr": stderr,
-                "error": "error too long. Write the output to a file when executing the bash command and read it using tail few lines at a time. Example: tail -n +X filename | head -n 50 (reads 50 lines starting at line X)",
-                "message": "Error length exceeds 500 characters"
+                "stdout": "",
+                "stderr": "error too long. Write the output to a file when executing the bash command and read it using tail few lines at a time. Example: tail -n +X filename | head -n 50 (reads 50 lines starting at line X)",
+                "message": "Error length exceeds 3000 characters"
             }
         
         return {

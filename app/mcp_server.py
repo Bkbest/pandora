@@ -131,6 +131,7 @@ def sandbox_execute_bash(sandbox_id: str, command: str) -> dict:
     
     Note: Use 'tail' to read files in large chunks to avoid overwhelming output.
     For reading 50 lines starting at line X: tail -n +X filename | head -n 50
+    Always use 'tail' with at least 20 lines (e.g., tail -n 20 filename).
 
     Args:
     - sandbox_id (str): sandbox identifier

@@ -10,7 +10,8 @@ RUN mkdir -p /workspace/.packages
 ENV PYTHONIOENCODING=utf-8 \
     PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PIP_TARGET=/workspace/.packages
+    PIP_TARGET=/workspace/.packages \
+    PYTHONPATH=/workspace/.packages
 
 # Create a workspace directory
 WORKDIR /workspace

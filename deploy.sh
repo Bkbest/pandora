@@ -84,10 +84,11 @@ sudo systemctl daemon-reload
 # Keep the FastAPI service installed, but disabled
 sudo systemctl disable --now "${SERVICE_NAME}.service" 2>/dev/null || true
 
-# Enable the MCP service
-sudo systemctl enable --now "${MCP_SERVICE_NAME}.service"
+# Enable and restart the MCP service
+sudo systemctl enable "${MCP_SERVICE_NAME}.service"
+sudo systemctl restart "${MCP_SERVICE_NAME}.service"
 
 echo "Deployed. FastAPI service is installed but disabled: ${SERVICE_NAME}.service"
-echo "MCP service is enabled: ${MCP_SERVICE_NAME}.service"
+echo "MCP service is enabled and restarted: ${MCP_SERVICE_NAME}.service"
 echo "Check status with: sudo systemctl status ${MCP_SERVICE_NAME}.service"
 echo "Logs: sudo journalctl -u ${MCP_SERVICE_NAME}.service -f"

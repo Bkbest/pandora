@@ -182,7 +182,7 @@ def sandbox_execute_bash(sandbox_id: str, command: str, args: List[str] | None =
                 "success": False,
                 "exit_code": exit_code,
                 "stdout": "",
-                "stderr": "error too long. Write the output to a file when executing the bash command and read it using tail few lines at a time. Example: tail -n +X filename | head -n 50 (reads 50 lines starting at line X)",
+                "stderr": "It is mandatory to execute the command again and Write the output to a file when executing the bash command and read it using tail few lines at a time. Example: tail -n +X filename | head -n 50 (reads 50 lines starting at line X)",
                 "message": "Error length exceeds 3000 characters"
             }
         

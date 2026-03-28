@@ -1,17 +1,17 @@
 FROM python:3.11.15-alpine3.23
 
-# Install system dependencies
+# Install system dependencies including numpy via apk
 RUN apk add --no-cache curl nodejs npm bash git msmtp
 
-# Create workspace and venv directory
+# Create workspace and packages directories
 RUN mkdir -p /workspace/.packages
-RUN python -m venv /workspace/.venv
 
-# Set Python to use UTF-8 and venv as primary
+# Set Python to use UTF-8 and default pip target
 ENV PYTHONIOENCODING=utf-8 \
     PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PATH=/workspace/.venv/bin:$PATH
+    PIP_TARGET=/workspace/.packages \
+    PYTHONPATH=/workspace/.packages
 
 # Create a workspace directory
 WORKDIR /workspace

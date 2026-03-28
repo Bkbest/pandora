@@ -123,7 +123,7 @@ def sandbox_delete_file(sandbox_id: str, path: str) -> dict:
 
 
 @mcp.tool()
-def sandbox_execute_bash(sandbox_id: str, command: str, args: List[str] | None = None) -> dict:
+def sandbox_execute_bash(sandbox_id: str, command: str) -> dict:
     """Execute a bash command inside a sandbox.
     
     This is a general-purpose tool that can run any command in the sandbox.
@@ -134,8 +134,7 @@ def sandbox_execute_bash(sandbox_id: str, command: str, args: List[str] | None =
 
     Args:
     - sandbox_id (str): sandbox identifier
-    - command (str): the bash command to execute (e.g., 'python', 'ls', 'mkdir')
-    - args (List[str] | None): command-line arguments passed to the command (defaults to None)   args=["script.py"] or args=["-la"]
+    - command (str): the bash command to execute (e.g., 'python script.py', 'ls -la', 'pip install requests')
 
     Returns:
     - exit_code, stdout, stderr
@@ -155,18 +154,16 @@ def sandbox_execute_bash(sandbox_id: str, command: str, args: List[str] | None =
             }
         
         # Check for args exceeding 100 characters
-        if args:
-            for arg in args:
-                if len(arg) > 100:
-                    return {
-                        "success": False,
-                        "exit_code": 1,
-                        "stdout": "",
-                        "stderr": "commandline argument too long. If executing code, put the code in a file and upsert the file first.",
-                        "message": "Argument length exceeds 100 characters"
-                    }
+        if len(command) > 100:
+            return {
+                "success": False,
+                "exit_code": 1,
+                "stdout": "",
+                "stderr": "commandline argument too long. If executing code, put the code in a file and upsert the file first.",
+                "message": "Argument length exceeds 100 characters, can bloat your context window."
+            }
         
-        exit_code, stdout, stderr = manager.execute(sandbox_id, command, args or [])
+        exit_code, stdout, stderr = manager.execute(sandbox_id, command, [])
         
         # Check for stdout/stderr exceeding 3000 characters
         if len(stdout) > 3000:
@@ -175,7 +172,7 @@ def sandbox_execute_bash(sandbox_id: str, command: str, args: List[str] | None =
                 "exit_code": exit_code,
                 "stdout": "",
                 "stderr": "output too long. Write the output to a file when executing the bash command and read it using tail few lines at a time. Example: tail -n +X filename | head -n 50 (reads 50 lines starting at line X)",
-                "message": "Output length exceeds 3000 characters"
+                "message": "Output length exceeds 3000 characters, can bloat your context window."
             }
         if len(stderr) > 3000:
             return {
@@ -183,7 +180,7 @@ def sandbox_execute_bash(sandbox_id: str, command: str, args: List[str] | None =
                 "exit_code": exit_code,
                 "stdout": "",
                 "stderr": "It is mandatory to execute the command again and Write the output to a file when executing the bash command and read it using tail few lines at a time. Example: tail -n +X filename | head -n 50 (reads 50 lines starting at line X)",
-                "message": "Error length exceeds 3000 characters"
+                "message": "length of stderr exceeds 3000 characters, might bloat your context window."
             }
         
         return {

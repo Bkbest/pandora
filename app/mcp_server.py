@@ -168,7 +168,7 @@ def sandbox_execute_bash(sandbox_id: str, command: str, args: List[str] | None =
         
         exit_code, stdout, stderr = manager.execute(sandbox_id, command, args or [])
         
-        # Check for stdout/stderr exceeding 500 characters
+        # Check for stdout/stderr exceeding 3000 characters
         if len(stdout) > 3000:
             return {
                 "success": False,

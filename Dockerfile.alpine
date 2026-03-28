@@ -1,4 +1,4 @@
-FROM python:3.11.15-alpine3.23
+FROM python:3.12.13-alpine
 
 # Install system dependencies including numpy via apk
 RUN apk add --no-cache curl nodejs npm bash git msmtp

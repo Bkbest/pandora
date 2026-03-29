@@ -1,7 +1,7 @@
 FROM alpine
 
-# Install system dependencies including Python, pip, numpy, matplotlib and pandas
-RUN apk add --no-cache python3 py3-pip python3-matplotlib python3-numpy python3-pandas curl nodejs npm bash git msmtp
+# Install system dependencies including Python and pip
+RUN apk add --no-cache pkgconf build-base python3 py3-pip curl nodejs npm bash git msmtp
 
 # Create workspace and packages directories
 RUN mkdir -p /workspace/.packages
@@ -15,6 +15,8 @@ ENV PYTHONIOENCODING=utf-8 \
 
 # Create a workspace directory
 WORKDIR /workspace
+
+RUN pip install matplotlib
 
 # Default command
 CMD ["python"]

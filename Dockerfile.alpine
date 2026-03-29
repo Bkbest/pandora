@@ -1,7 +1,7 @@
-FROM python:3.12.13-alpine
+FROM alpine
 
-# Install system dependencies including numpy via apk
-RUN apk add --no-cache curl nodejs npm bash git msmtp
+# Install system dependencies including Python and pip
+RUN apk add --no-cache python3 py3-pip curl nodejs npm bash git msmtp
 
 # Create workspace and packages directories
 RUN mkdir -p /workspace/.packages

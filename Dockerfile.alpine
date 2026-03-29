@@ -1,7 +1,7 @@
 FROM alpine
 
 # Install system dependencies including Python and pip
-RUN apk add --no-cache pkgconf build-base python3 py3-pip curl nodejs npm bash git msmtp
+RUN apk add --no-cache pkgconf build-base python3-dev python3 py3-pip curl nodejs npm bash git msmtp
 
 # Create workspace and packages directories
 RUN mkdir -p /workspace/.packages

@@ -78,7 +78,6 @@ class SandboxManager:
                 detach=True,
                 tty=False,
                 network_disabled=self.network_disabled,
-                read_only=True,
                 security_opt=["no-new-privileges"],
                 working_dir=self.workdir_in_container,
                 tmpfs={"/tmp": "rw,noexec,nosuid,size=256m"},

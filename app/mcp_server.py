@@ -154,14 +154,14 @@ def sandbox_execute_bash(sandbox_id: str, command: str) -> dict:
                 "message": "cat command not allowed"
             }
         
-        # Check for args exceeding 100 characters
-        if len(command) > 100:
+        # Check for args exceeding 500 characters
+        if len(command) > 500:
             return {
                 "success": False,
                 "exit_code": 1,
                 "stdout": "",
                 "stderr": "commandline argument too long. If executing code, put the code in a file and upsert the file first.",
-                "message": "Argument length exceeds 100 characters, can bloat your context window."
+                "message": "Argument length exceeds 500 characters, can bloat your context window."
             }
         
         exit_code, stdout, stderr = manager.execute(sandbox_id, command, [])

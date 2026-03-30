@@ -3,6 +3,19 @@ FROM alpine
 # Install system dependencies including Python and pip
 RUN apk add --no-cache pkgconf build-base python3-dev python3 py3-pip curl nodejs npm bash git msmtp
 
+# Configure Git with GitHub token
+ARG GITHUB_TOKEN
+ENV GITHUB_TOKEN=${GITHUB_TOKEN}
+
+# Configure git global settings and credential helper
+RUN git config --global init.defaultBranch main && \
+    git config --global user.name "GitHub User" && \
+    git config --global user.email "github@users.noreply.github.com" && \
+    git config --global credential.helper store && \
+    if [[ -n "$GITHUB_TOKEN" ]]; then \
+        echo "https://${GITHUB_TOKEN}@github.com" > /workspace/.git-credentials; \
+    fi
+
 # Create workspace and packages directories
 RUN mkdir -p /workspace/.packages
 

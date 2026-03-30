@@ -108,6 +108,108 @@ class SandboxManager:
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(content, encoding="utf-8")
 
+    def read_file(self, sandbox_id: str, file_path: str, offset: int = 0, limit: int = 2000) -> str:
+        """Read file content from a sandbox workspace.
+
+        Args:
+            sandbox_id: Sandbox identifier
+            file_path: Relative path to the file inside the sandbox workspace
+            offset: Line number to start reading from (0-based)
+            limit: Maximum number of lines to read
+
+        Returns:
+            Formatted file content with line numbers, or an error message if not found
+        """
+        if offset < 0:
+            return "Error: offset must be >= 0"
+        if limit <= 0:
+            return "Error: limit must be > 0"
+        if limit > 50:
+            return "Error: limit cannot exceed 50"
+
+        sandbox_root = self.sandbox_dir(sandbox_id)
+        if not sandbox_root.exists():
+            return f"Error: sandbox not found: {sandbox_id}"
+
+        try:
+            abs_path = self.safe_path(sandbox_root, file_path)
+        except HTTPException:
+            return f"Error: invalid path: {file_path}"
+
+        if not abs_path.exists():
+            return f"Error: file not found: {file_path}"
+        if not abs_path.is_file():
+            return f"Error: path is not a file: {file_path}"
+
+        output_lines = []
+        with abs_path.open("r", encoding="utf-8", errors="replace") as f:
+            for idx, raw_line in enumerate(f):
+                if idx < offset:
+                    continue
+                if idx >= offset + limit:
+                    break
+                output_lines.append(f"{idx + 1}\t{raw_line.rstrip()}")
+
+        if not output_lines:
+            return "No content available from offset; file empty or offset beyond EOF."
+
+        return "\n".join(output_lines)
+
+    def edit_file(
+        self,
+        sandbox_id: str,
+        file_path: str,
+        old_string: str,
+        new_string: str,
+        replace_all: bool = False,
+    ) -> str:
+        """Perform exact string replacements in a file within a sandbox workspace.
+
+        Args:
+            sandbox_id: Sandbox identifier
+            file_path: Relative path to the file inside the sandbox workspace
+            old_string: The exact string to find and replace
+            new_string: The replacement string
+            replace_all: If True, replace every occurrence of old_string; otherwise only the first
+
+        Returns:
+            Success message with replacement count, or an error message
+        """
+        sandbox_root = self.sandbox_dir(sandbox_id)
+        if not sandbox_root.exists():
+            return f"Error: sandbox not found: {sandbox_id}"
+
+        try:
+            abs_path = self.safe_path(sandbox_root, file_path)
+        except HTTPException:
+            return f"Error: invalid path: {file_path}"
+
+        if not abs_path.exists():
+            return f"Error: file not found: {file_path}"
+        if not abs_path.is_file():
+            return f"Error: path is not a file: {file_path}"
+
+        content = abs_path.read_text(encoding="utf-8", errors="replace")
+
+        if old_string not in content:
+            return f"Error: old_string not found in file: {file_path}"
+
+        if not replace_all:
+            occurrences = content.count(old_string)
+            if occurrences > 1:
+                return (
+                    f"Error: old_string is not unique in the file ({occurrences} occurrences). "
+                    f"Use replace_all=True to replace all occurrences."
+                )
+            new_content = content.replace(old_string, new_string, 1)
+            count = 1
+        else:
+            new_content = content.replace(old_string, new_string)
+            count = content.count(old_string)
+
+        abs_path.write_text(new_content, encoding="utf-8")
+        return f"Success: replaced {count} occurrence(s) in '{file_path}'."
+
     def delete_file(self, sandbox_id: str, file_path: str) -> None:
         base = self.sandbox_dir(sandbox_id)
         if not base.exists():

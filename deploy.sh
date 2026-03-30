@@ -27,9 +27,14 @@ fi
 
 # Build Docker image (always rebuild to overwrite existing image)
 DOCKER_IMAGE="${SANDBOX_PYTHON_IMAGE:-sandbox-python}"
+GITHUB_TOKEN="$(redis-cli -h 192.168.68.111 -p 6379 GET GITHUB_TOKEN 2>/dev/null || echo "")"
 if [[ -f "$APP_DIR/Dockerfile.alpine" ]]; then
     echo "Building Docker image '$DOCKER_IMAGE'..."
-    docker build -t "$DOCKER_IMAGE" -f "$APP_DIR/Dockerfile.alpine" "$APP_DIR"
+    docker build \
+        --build-arg GITHUB_TOKEN="$GITHUB_TOKEN" \
+        -t "$DOCKER_IMAGE" \
+        -f "$APP_DIR/Dockerfile.alpine" \
+        "$APP_DIR"
 else
     echo "Error: Dockerfile.alpine not found in $APP_DIR"
     exit 1

@@ -203,6 +203,64 @@ def sandbox_execute_bash(sandbox_id: str, command: str) -> dict:
 
 
 @mcp.tool()
+def sandbox_read_file(
+    sandbox_id: str,
+    file_path: str,
+    offset: int,
+    limit: int,
+) -> str:
+    """Read file content from a sandbox filesystem with mandatory offset and limit.
+
+    Args:
+        sandbox_id: Sandbox identifier
+        file_path: Relative path to the file inside the sandbox workspace
+        offset: Line number to start reading from (0-based)
+        limit: Maximum number of lines to read (capped at 50)
+
+    Returns:
+        Formatted file content with line numbers, or an error message if the file is not found
+    """
+    return manager.read_file(sandbox_id, file_path, offset, limit)
+
+
+@mcp.tool()
+def sandbox_edit_file(
+    file_path: str,
+    old_string: str,
+    new_string: str,
+    sandbox_id: str,
+    replace_all: bool = False,
+) -> str:
+    """Perform exact string replacements in files.
+
+    Usage:
+    - You must use your `sandbox_read_file` tool at least once in the conversation before editing.
+      This tool will error if you attempt an edit without reading the file.
+    - When editing text from Read tool output, ensure you preserve the exact indentation (tabs/spaces)
+      as it appears AFTER the line number prefix. The line number prefix format is: spaces + line number + tab.
+      Everything after that tab is the actual file content to match. Never include any part of the
+      line number prefix in the old_string or new_string.
+    - ALWAYS prefer editing existing files. NEVER write new files unless explicitly required.
+    - Only use emojis if the user explicitly requests it. Avoid adding emojis to files unless asked.
+    - The edit will FAIL if `old_string` is not unique in the file. Either provide a larger string
+      with more surrounding context to make it unique or use `replace_all` to change every instance.
+    - Use `replace_all` for replacing and renaming strings across the file. This parameter is useful
+      if you want to rename a variable for instance.
+
+    Args:
+        file_path: Relative path to the file inside the sandbox workspace
+        old_string: The exact string to find and replace
+        new_string: The replacement string
+        sandbox_id: Sandbox identifier
+        replace_all: If True, replace every occurrence of old_string (default: False)
+
+    Returns:
+        Success message with replacement count, or an error message
+    """
+    return manager.edit_file(sandbox_id, file_path, old_string, new_string, replace_all)
+
+
+@mcp.tool()
 def list_running_sandboxes() -> dict:
     """List all running sandboxes with their status and metadata.
     

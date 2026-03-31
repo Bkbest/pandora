@@ -15,9 +15,15 @@ RUN git config --global init.defaultBranch main && \
     git config --global user.name "Rocky Agent" && \
     git config --global user.email "aravindbk21@gmail.com" && \
     git config --global credential.helper store && \
-    if [[ -n "$GITHUB_TOKEN" ]]; then \
+    git config --global credential.helper.store.credentialFile /workspace/.git-credentials
+
+# Add GitHub token to credentials file if provided
+RUN if [[ -n "$GITHUB_TOKEN" ]]; then \
         echo "https://${GITHUB_TOKEN}@github.com" > /workspace/.git-credentials; \
     fi
+
+# Disable interactive prompts
+ENV GIT_TERMINAL_PROMPT=0
 
 # Set Python to use UTF-8 and default pip target
 ENV PYTHONIOENCODING=utf-8 \

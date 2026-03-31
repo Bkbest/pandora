@@ -1,29 +1,14 @@
 FROM alpine
 
 # Install system dependencies including Python and pip
-RUN apk add --no-cache pkgconf build-base python3-dev python3 py3-pip curl nodejs npm bash git msmtp
+RUN apk add --no-cache pkgconf build-base python3-dev python3 py3-pip curl nodejs npm bash git msmtp github-cli
 
-# Configure Git with GitHub token
+# Configure GitHub CLI with token
 ARG GITHUB_TOKEN
 ENV GITHUB_TOKEN=${GITHUB_TOKEN}
-
-# Create workspace and packages directories
-RUN mkdir -p /workspace/.packages
-
-# Configure git global settings and credential helper
-RUN git config --global init.defaultBranch main && \
-    git config --global user.name "Rocky Agent" && \
-    git config --global user.email "aravindbk21@gmail.com" && \
-    git config --global credential.helper store && \
-    git config --global credential.helper.store.credentialFile /workspace/.git-credentials
-
-# Add GitHub token to credentials file if provided
 RUN if [[ -n "$GITHUB_TOKEN" ]]; then \
-        echo "https://${GITHUB_TOKEN}@github.com" > /workspace/.git-credentials; \
+        echo ${GITHUB_TOKEN} | gh auth login --hostname github.com --scopes repo --with-token; \
     fi
-
-# Disable interactive prompts
-ENV GIT_TERMINAL_PROMPT=0
 
 # Set Python to use UTF-8 and default pip target
 ENV PYTHONIOENCODING=utf-8 \

@@ -7,6 +7,8 @@ RUN apk add --no-cache pkgconf build-base python3-dev python3 py3-pip curl nodej
 ARG GITHUB_TOKEN
 ENV GITHUB_TOKEN=${GITHUB_TOKEN}
 
+RUN mkdir -p /workspace/.git-credentials;
+
 # Configure git global settings and credential helper
 RUN git config --global init.defaultBranch main && \
     git config --global user.name "Rocky Agent" && \

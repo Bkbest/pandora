@@ -14,10 +14,11 @@ RUN mkdir -p /workspace/.packages
 RUN git config --global init.defaultBranch main && \
     git config --global user.name "Rocky Agent" && \
     git config --global user.email "aravindbk21@gmail.com" && \
-    git config --global credential.helper "store --file /workspace/.git-credentials"
+    git config --global credential.helper "store --file /root/.git-credentials"
 
 # Add GitHub token to credentials file
-RUN echo "https://Bkbest:${GITHUB_TOKEN}@github.com" > /workspace/.git-credentials
+RUN mkdir -p /root && \
+    echo "https://Bkbest:${GITHUB_TOKEN}@github.com" > /root/.git-credentials
 
 # Disable interactive prompts
 ENV GIT_TERMINAL_PROMPT=0
@@ -31,8 +32,6 @@ ENV PYTHONIOENCODING=utf-8 \
 
 # Create a workspace directory
 WORKDIR /workspace
-
-RUN pip install matplotlib
 
 # Default command
 CMD ["python"]

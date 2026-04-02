@@ -68,10 +68,6 @@ class SandboxManager:
         host_dir = self.sandbox_dir(sandbox_id)
         host_dir.mkdir(parents=True, exist_ok=False)
 
-        # Get host user UID/GID for container
-        host_uid = os.getuid()
-        host_gid = os.getgid()
-
         name = self.container_name(sandbox_id)
 
         try:
@@ -87,8 +83,7 @@ class SandboxManager:
                 tmpfs={"/tmp": "rw,noexec,nosuid,size=256m"},
                 volumes={
                     str(host_dir): {"bind": self.workdir_in_container, "mode": "rw"}
-                },
-                user=f"{host_uid}:{host_gid}",
+                }
             )
         except Exception:
             shutil.rmtree(host_dir, ignore_errors=True)

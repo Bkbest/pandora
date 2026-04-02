@@ -98,15 +98,22 @@ class SandboxManager:
         finally:
             shutil.rmtree(self.sandbox_dir(sandbox_id), ignore_errors=True)
 
-    def upsert_file(self, sandbox_id: str, path: str, content: str) -> None:
+    def upsert_file(self, sandbox_id: str, path: str, content: str) -> str:
         base = self.sandbox_dir(sandbox_id)
         if not base.exists():
-            self.get_container(sandbox_id)
-            raise HTTPException(status_code=404, detail="Sandbox directory missing")
+            return f"Error: sandbox not found: {sandbox_id}"
 
-        target = self.safe_path(base, path)
-        target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_text(content, encoding="utf-8")
+        try:
+            target = self.safe_path(base, path)
+        except HTTPException:
+            return f"Error: invalid path: {path}"
+
+        try:
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(content, encoding="utf-8")
+            return f"Success: file '{path}' upserted successfully."
+        except Exception as e:
+            return f"Error: failed to upsert file: {str(e)}"
 
     def read_file(self, sandbox_id: str, file_path: str, offset: int = 0, limit: int = 2000) -> str:
         """Read file content from a sandbox workspace.
@@ -141,19 +148,22 @@ class SandboxManager:
         if not abs_path.is_file():
             return f"Error: path is not a file: {file_path}"
 
-        output_lines = []
-        with abs_path.open("r", encoding="utf-8", errors="replace") as f:
-            for idx, raw_line in enumerate(f):
-                if idx < offset:
-                    continue
-                if idx >= offset + limit:
-                    break
-                output_lines.append(f"{idx + 1}\t{raw_line.rstrip()}")
+        try:
+            output_lines = []
+            with abs_path.open("r", encoding="utf-8", errors="replace") as f:
+                for idx, raw_line in enumerate(f):
+                    if idx < offset:
+                        continue
+                    if idx >= offset + limit:
+                        break
+                    output_lines.append(f"{idx + 1}\t{raw_line.rstrip()}")
 
-        if not output_lines:
-            return "No content available from offset; file empty or offset beyond EOF."
+            if not output_lines:
+                return "No content available from offset; file empty or offset beyond EOF."
 
-        return "\n".join(output_lines)
+            return "\n".join(output_lines)
+        except Exception as e:
+            return f"Error: failed to read file: {str(e)}"
 
     def edit_file(
         self,
@@ -189,26 +199,29 @@ class SandboxManager:
         if not abs_path.is_file():
             return f"Error: path is not a file: {file_path}"
 
-        content = abs_path.read_text(encoding="utf-8", errors="replace")
+        try:
+            content = abs_path.read_text(encoding="utf-8", errors="replace")
 
-        if old_string not in content:
-            return f"Error: old_string not found in file: {file_path}"
+            if old_string not in content:
+                return f"Error: old_string not found in file: {file_path}"
 
-        if not replace_all:
-            occurrences = content.count(old_string)
-            if occurrences > 1:
-                return (
-                    f"Error: old_string is not unique in the file ({occurrences} occurrences). "
-                    f"Use replace_all=True to replace all occurrences."
-                )
-            new_content = content.replace(old_string, new_string, 1)
-            count = 1
-        else:
-            new_content = content.replace(old_string, new_string)
-            count = content.count(old_string)
+            if not replace_all:
+                occurrences = content.count(old_string)
+                if occurrences > 1:
+                    return (
+                        f"Error: old_string is not unique in the file ({occurrences} occurrences). "
+                        f"Use replace_all=True to replace all occurrences."
+                    )
+                new_content = content.replace(old_string, new_string, 1)
+                count = 1
+            else:
+                new_content = content.replace(old_string, new_string)
+                count = content.count(old_string)
 
-        abs_path.write_text(new_content, encoding="utf-8")
-        return f"Success: replaced {count} occurrence(s) in '{file_path}'."
+            abs_path.write_text(new_content, encoding="utf-8")
+            return f"Success: replaced {count} occurrence(s) in '{file_path}'."
+        except Exception as e:
+            return f"Error: failed to edit file: {str(e)}"
 
     def delete_file(self, sandbox_id: str, file_path: str) -> None:
         base = self.sandbox_dir(sandbox_id)

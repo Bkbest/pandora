@@ -40,7 +40,7 @@ RUN echo "https://Bkbest:${GITHUB_TOKEN}@github.com" > ${GIT_CREDENTIALS_FILE} &
     chmod 600 ${GIT_CREDENTIALS_FILE}
 
 # Configure GitHub CLI authentication
-RUN echo ${GITHUB_TOKEN} | gh auth login --with-token
+RUN gh auth login --with-token
 
 # Disable interactive prompts
 ENV GIT_TERMINAL_PROMPT=0

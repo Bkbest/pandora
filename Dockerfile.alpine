@@ -14,13 +14,16 @@ ENV GITHUB_TOKEN=${GITHUB_TOKEN}
 WORKDIR /workspace
 
 # Create git credentials directory outside workspace (won't be overridden by volume mount)
-RUN mkdir -p /git-credentials && chmod 755 /git-credentials
+RUN mkdir -p /git-credentials && \
+    chown -R 1000:1000 /git-credentials && \
+    chmod 700 /git-credentials
 
 # Create python packages directory outside workspace (won't be overridden by volume mount)
-RUN mkdir -p /python-packages && chmod 777 /python-packages
+RUN mkdir -p /python-packages && \
+    chown -R 1000:1000 /python-packages && \
+    chmod 755 /python-packages
 
-# Configure git global settings - set HOME to /git-credentials so .gitconfig is created there
-ENV HOME=/git-credentials
+# Configure git global settings with explicit config path
 ENV GIT_CONFIG_GLOBAL=/git-credentials/.gitconfig
 ENV GIT_CREDENTIALS_FILE=/git-credentials/.git-credentials
 
@@ -31,7 +34,8 @@ RUN git config --global init.defaultBranch main && \
 
 # Add GitHub token to credentials file
 RUN echo "https://Bkbest:${GITHUB_TOKEN}@github.com" > ${GIT_CREDENTIALS_FILE} && \
-    chmod 644 ${GIT_CREDENTIALS_FILE}
+    chown 1000:1000 ${GIT_CREDENTIALS_FILE} && \
+    chmod 600 ${GIT_CREDENTIALS_FILE}
 
 # Disable interactive prompts
 ENV GIT_TERMINAL_PROMPT=0

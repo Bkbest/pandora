@@ -19,9 +19,7 @@ RUN mkdir -p /git-credentials && \
     chmod 700 /git-credentials
 
 # Create python packages directory outside workspace (won't be overridden by volume mount)
-RUN mkdir -p /python-packages && \
-    chown -R 1000:1000 /python-packages && \
-    chmod 755 /python-packages
+RUN mkdir -p /python-packages && chmod 777 /python-packages
 
 # Configure git global settings - set HOME to /git-credentials so .gitconfig is created there
 ENV HOME=/git-credentials

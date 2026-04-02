@@ -7,18 +7,26 @@ RUN apk add --no-cache pkgconf build-base python3-dev python3 py3-pip curl nodej
 ARG GITHUB_TOKEN
 ENV GITHUB_TOKEN=${GITHUB_TOKEN}
 
-# Create packages directory
-RUN mkdir -p /root/.packages
+# Create workspace directory (will be mounted from host)
+WORKDIR /workspace
 
-# Configure git global settings and credential helper
+# Create git credentials directory outside workspace (won't be overridden by volume mount)
+RUN mkdir -p /git-credentials && \
+    chown -R 1000:1000 /git-credentials && \
+    chmod 644 /git-credentials/*
+
+# Configure git global settings
+ENV HOME=/workspace
+ENV GIT_CONFIG_GLOBAL=/git-credentials/.gitconfig
+ENV GIT_CREDENTIALS_FILE=/git-credentials/.git-credentials
+
 RUN git config --global init.defaultBranch main && \
     git config --global user.name "Rocky Agent" && \
     git config --global user.email "aravindbk21@gmail.com" && \
-    git config --global credential.helper "store --file /root/.git-credentials"
+    git config --global credential.helper "store --file ${GIT_CREDENTIALS_FILE}"
 
 # Add GitHub token to credentials file
-RUN mkdir -p /root && \
-    echo "https://Bkbest:${GITHUB_TOKEN}@github.com" > /root/.git-credentials
+RUN echo "https://Bkbest:${GITHUB_TOKEN}@github.com" > ${GIT_CREDENTIALS_FILE}
 
 # Disable interactive prompts
 ENV GIT_TERMINAL_PROMPT=0
@@ -27,11 +35,8 @@ ENV GIT_TERMINAL_PROMPT=0
 ENV PYTHONIOENCODING=utf-8 \
     PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PIP_TARGET=/root/.packages \
-    PYTHONPATH=/root/.packages
-
-# Create a workspace directory
-WORKDIR /workspace
+    PIP_TARGET=/workspace/.packages \
+    PYTHONPATH=/workspace/.packages
 
 RUN pip install matplotlib
 

@@ -3,6 +3,9 @@ FROM alpine
 # Install system dependencies including Python and pip
 RUN apk add --no-cache pkgconf build-base python3-dev python3 py3-pip curl nodejs npm bash git msmtp
 
+# Install GitHub CLI
+RUN apk add --no-cache github-cli
+
 # Configure Git with GitHub token
 ARG GITHUB_TOKEN
 ENV GITHUB_TOKEN=${GITHUB_TOKEN}
@@ -31,6 +34,8 @@ RUN echo "https://Bkbest:${GITHUB_TOKEN}@github.com" > ${GIT_CREDENTIALS_FILE} &
     chown 1000:1000 ${GIT_CREDENTIALS_FILE} && \
     chmod 600 ${GIT_CREDENTIALS_FILE}
 
+# Configure GitHub CLI authentication
+RUN echo ${GITHUB_TOKEN} | gh auth login --with-token 
 # Disable interactive prompts
 ENV GIT_TERMINAL_PROMPT=0
 
